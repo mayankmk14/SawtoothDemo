@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package SawDemo;
+
+message Payload{
+    
+    enum Action {
+        ACCOUNT = 0;
+        TRANSACT = 1;
+        BALANCE = 2;
+    }
+
+    message Account{
+        string name = 1;
+        string email = 5;        
+    }
+
+    message Transact{
+        enum Type {
+            CREDIT = 0;
+            DEBIT = 1;
+        }
+        int64 amount = 1;
+        Type type = 2;
+    }
+
+    Action action = 1;
+    Account createAccount = 2;
+    Transact transact = 3;
+    string issueTimestamp = 4;
+    }

@@ -1,0 +1,6 @@
+{
+    "restapiURL":"http://localhost:8024",
+    "keystore":"keys",
+    "familyName":"Bank",
+    "familyVersion":"1.0"
+}

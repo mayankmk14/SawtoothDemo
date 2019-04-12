@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package Asset;
+
+message Account{
+    string address = 1;
+    string userName = 2;
+    int64 balance = 3;
+    string publicKey =  4;
+    string email = 5;
+}
+
+message Trail {
+    enum Actions {
+        CREDIT = 0;
+        DEBIT = 1;
+        ACCOUNT_CREATED = 2;
+    }
+    string userName =1;
+    string txnNumber=2;
+    string timestamp=3;
+    string userAddress=4;
+    Actions action=6;
+    string address = 7;
+}
+
+    

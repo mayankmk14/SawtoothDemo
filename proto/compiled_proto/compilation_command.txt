@@ -1,0 +1,13 @@
+# Dependencies-
+npm install -g protocol-buffers
+ 
+# compile the schema(From Root Directory)
+
+protocol-buffers ./proto/settings.proto -o ./proto/compiled_proto/settings.js
+protocol-buffers ./proto/identity.proto -o ./proto/compiled_proto/identity.js
+protocol-buffers ./proto/assets.proto -o ./proto/compiled_proto/assets.js
+protocol-buffers ./proto/transaction.proto -o ./proto/compiled_proto/transaction.js
+ 
+# then install the runtime dependency in the project 
+npm install --save protocol-buffers-encodings
+
