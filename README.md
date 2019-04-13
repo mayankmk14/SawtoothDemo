@@ -12,3 +12,7 @@ Node v8.9.0
 Docker v18.09.1
 
 Using Dev-mode Engine as consensus (Smartcontract remains unchanged)
+
+Commands :
+To start Blockchain (from roort folder) : `docker-compose up`
+TO start Client (from roort folder) : `node index.js` 
