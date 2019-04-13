@@ -8,6 +8,6 @@ This Demo provides 2 functionalities to the user :
 
 Sawtooth v1.1
 Node v8.9.0
-Docker v19.09.1
+Docker v18.09.1
 
 Using Dev-mode Engine as consensus (Smartcontract remains unchanged)
