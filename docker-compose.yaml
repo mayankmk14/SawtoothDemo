@@ -6,7 +6,7 @@ networks:
 services:
 
   validator:
-    image: hyperledger/sawtooth-validator:1.0
+    image: hyperledger/sawtooth-validator:1.1
     container_name: my-bank
     expose:
       - 4004
@@ -24,13 +24,26 @@ services:
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
-          --bind network:tcp://eth0:8800
+          --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5050 
       "
     networks:
       - myblockchain
 
+  devmode-engine:
+    image: hyperledger/sawtooth-devmode-engine-rust:1.1
+    container_name: sawtooth-devmode-engine-rust
+    ports:
+      - 5051:5050
+    depends_on:
+      - validator
+    entrypoint: devmode-engine-rust -C tcp://validator:5050
+    networks: 
+      - myblockchain
+
+
   settings-tp:
-    image: hyperledger/sawtooth-settings-tp:1.0
+    image: hyperledger/sawtooth-settings-tp:1.1
     container_name: my-settings-tp-bank
     depends_on:
       - validator
@@ -39,7 +52,7 @@ services:
       - myblockchain
 
   identity-tp:
-    image: hyperledger/sawtooth-identity-tp:latest
+    image: hyperledger/sawtooth-identity-tp:1.1
     container_name: my-identity-tp-bank
     depends_on:
       - validator
@@ -48,7 +61,7 @@ services:
       - myblockchain  
 
   rest-api:
-    image: hyperledger/sawtooth-rest-api:1.0
+    image: hyperledger/sawtooth-rest-api:1.1
     container_name: my-rest-api-bank
     expose:
       - 8008
@@ -65,13 +78,11 @@ services:
 
   python_tp:
     build:
-      context: ./
-      dockerfile: ./transaction-processor/Dockerfile
-    image: bank
+      context: ./transaction-processor
+    image: bank-1
     container_name: python_tp-bank
     depends_on:
       - validator
-    command: python3 main.py -C tcp://validator:4004
     volumes:
       - ./transaction-processor:/project
     networks:
