@@ -7,7 +7,7 @@ This Demo provides 2 functionalities to the user :
 1. To create an account on Blockchain
 2. To transact( Credit/Debit ) on that account using his Private keys.
 
-Sawtooth v1.1
+Sawtooth v1.0
 
 Node v8.9.0
 
