@@ -13,8 +13,8 @@ Node v8.9.0
 
 Docker v18.09.1
 
-Using Dev-mode Engine as consensus (Smartcontract remains unchanged)
+Using Poet-Simulator as consensus (Smartcontract remains unchanged) to create a multi-validator(3) network
 
 Commands :
-To start Blockchain (from roort folder) : `docker-compose up`
-TO start Client (from roort folder) : `node index.js` 
+To start Blockchain (from root folder) : `docker-compose up`
+TO start Client (from root folder) : `node index.js` 

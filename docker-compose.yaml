@@ -1,89 +1,300 @@
-version: '2.0'
+version: "2.0"
 
 networks:
   myblockchain:
 
 services:
+  shell:
+    image: hyperledger/sawtooth-all:1.0
+    container_name: sawtooth-shell-default
+    entrypoint: "bash -c \"\
+        sawtooth keygen && \
+        tail -f /dev/null \
+        \""
+    networks:
+      - myblockchain
 
-  validator:
-    image: hyperledger/sawtooth-validator:1.1
-    container_name: my-bank
+  validator-0:
+    image: hyperledger/sawtooth-validator:1.0
+    container_name: sawtooth-validator-default-0
+    volumes:
+      - ./poet-shared/validator-0/keys:/etc/sawtooth/keys
+      - ./poet-shared/validator-0/blocks:/var/lib/sawtooth
     expose:
       - 4004
+      - 8800
     ports:
-      - '4020:4004'
-    # start the validator with an empty genesis batch
-    entrypoint: |
-      bash -c "
-        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
-          sawadm keygen &&
-          sawtooth keygen my_key &&
-          sawset genesis -k /root/.sawtooth/keys/my_key.priv &&
-          sawadm genesis config-genesis.batch
-        fi;
-        sawtooth-validator -vv \
-          --endpoint tcp://validator:8800 \
-          --bind component:tcp://eth0:4004 \
+      - "4004:4004"
+      - "8800:8800"
+    command: "bash -c \"\
+        if [ ! -f /var/lib/sawtooth/block-chain-id ]; then \
+        sawadm keygen --force && \
+        sawset genesis \
+          -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawset proposal create \
+          -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.algorithm=poet \
+          sawtooth.poet.report_public_key_pem=\
+          \\\"$$(cat /etc/sawtooth/simulator_rk_pub.pem)\\\" \
+          sawtooth.poet.valid_enclave_measurements=$$(poet enclave measurement) \
+          sawtooth.poet.valid_enclave_basenames=$$(poet enclave basename) \
+          -o config.batch && \
+        poet registration create -k /etc/sawtooth/keys/validator.priv -o poet.batch && \
+        sawset proposal create \
+          -k /etc/sawtooth/keys/validator.priv \
+             sawtooth.poet.target_wait_time=5 \
+             sawtooth.poet.initial_wait_time=25 \
+             sawtooth.publisher.max_batches_per_block=100 \
+          -o poet-settings.batch && \
+        sawadm genesis \
+          config-genesis.batch config.batch poet.batch poet-settings.batch ;\
+        fi && \
+        sawtooth-validator -v \
           --bind network:tcp://eth0:8800 \
-          --bind consensus:tcp://eth0:5050 
-      "
+          --bind component:tcp://eth0:4004 \
+          --peering dynamic \
+          --endpoint tcp://validator-0:8800 \
+          --scheduler serial \
+          --network trust
+    \""
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
+        /project/sawtooth-core/consensus/poet/simulator:\
+        /project/sawtooth-core/consensus/poet/core"
+    stop_signal: SIGKILL
     networks:
       - myblockchain
 
-  devmode-engine:
-    image: hyperledger/sawtooth-devmode-engine-rust:1.1
-    container_name: sawtooth-devmode-engine-rust
+  validator-1:
+    image: hyperledger/sawtooth-validator:1.0
+    container_name: sawtooth-validator-default-1
+    volumes:
+      - ./poet-shared/validator-1/keys:/etc/sawtooth/keys
+      - ./poet-shared/validator-1/blocks:/var/lib/sawtooth
+    expose:
+      - 4004
+      - 8800
     ports:
-      - 5051:5050
-    depends_on:
-      - validator
-    entrypoint: devmode-engine-rust -C tcp://validator:5050
-    networks: 
-      - myblockchain
-
-
-  settings-tp:
-    image: hyperledger/sawtooth-settings-tp:1.1
-    container_name: my-settings-tp-bank
-    depends_on:
-      - validator
-    entrypoint: settings-tp -vv -C tcp://validator:4004
+      - "4005:4004"
+      - "8801:8800"
+    command: |
+      bash -c "
+        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then \
+        sawadm keygen --force ; \
+        fi && \
+        sawtooth-validator -v \
+            --bind network:tcp://eth0:8800 \
+            --bind component:tcp://eth0:4004 \
+            --peering dynamic \
+            --endpoint tcp://validator-1:8800 \
+            --seeds tcp://validator-0:8800 \
+            --scheduler serial \
+            --network trust
+      "
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
+        /project/sawtooth-core/consensus/poet/simulator:\
+        /project/sawtooth-core/consensus/poet/core"
+    stop_signal: SIGKILL
     networks:
       - myblockchain
 
-  identity-tp:
-    image: hyperledger/sawtooth-identity-tp:1.1
-    container_name: my-identity-tp-bank
-    depends_on:
-      - validator
-    entrypoint: identity-tp -vv -C tcp://validator:4004
+  validator-2:
+    image: hyperledger/sawtooth-validator:1.0
+    container_name: sawtooth-validator-default-2
+    volumes:
+      - ./poet-shared/validator-2/keys:/etc/sawtooth/keys
+      - ./poet-shared/validator-2/blocks:/var/lib/sawtooth
+    expose:
+      - 4004
+      - 8800
+    ports:
+      - "4006:4004"
+      - "8802:8800"
+    command: |
+      bash -c "
+        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then \
+        sawadm keygen --force ; \
+        fi && \
+        sawtooth-validator -v \
+            --bind network:tcp://eth0:8800 \
+            --bind component:tcp://eth0:4004 \
+            --peering dynamic \
+            --endpoint tcp://validator-2:8800 \
+            --seeds tcp://validator-0:8800 \
+            --scheduler serial \
+            --network trust
+      "
+    environment:
+      PYTHONPATH: "/project/sawtooth-core/consensus/poet/common:\
+        /project/sawtooth-core/consensus/poet/simulator:\
+        /project/sawtooth-core/consensus/poet/core"
+    stop_signal: SIGKILL
     networks:
-      - myblockchain  
+      - myblockchain
 
-  rest-api:
-    image: hyperledger/sawtooth-rest-api:1.1
-    container_name: my-rest-api-bank
+
+  rest-api-0:
+    image: hyperledger/sawtooth-rest-api:1.0
+    container_name: sawtooth-rest-api-default-0
     expose:
       - 8008
     ports:
-      - '8024:8008'
-    depends_on:
-      - validator
-    entrypoint: |
-      sawtooth-rest-api -vv
-        --connect tcp://validator:4004
-        --bind rest-api:8008
+      - "8008:8008"
+    command: |
+      bash -c "
+        sawtooth-rest-api \
+          --connect tcp://validator-0:4004 \
+          --bind rest-api-0:8008"
+    stop_signal: SIGKILL
     networks:
       - myblockchain
 
-  python_tp:
+  rest-api-1:
+    image: hyperledger/sawtooth-rest-api:1.0
+    container_name: sawtooth-rest-api-default-1
+    expose:
+      - 8008
+    ports:
+      - "8009:8008"
+    command: |
+      bash -c "
+        sawtooth-rest-api \
+          --connect tcp://validator-1:4004 \
+          --bind rest-api-1:8008"
+    stop_signal: SIGKILL
+    networks:
+      - myblockchain
+
+  rest-api-2:
+    image: hyperledger/sawtooth-rest-api:1.0
+    container_name: sawtooth-rest-api-default-2
+    expose:
+      - 8008
+    ports:
+      - "8010:8008"
+    command: |
+      bash -c "
+        sawtooth-rest-api \
+          --connect tcp://validator-2:4004 \
+          --bind rest-api-2:8008"
+    stop_signal: SIGKILL
+    networks:
+      - myblockchain
+
+
+  settings-tp-0:
+    image: hyperledger/sawtooth-settings-tp:1.0
+    container_name: sawtooth-settings-tp-default-0
+    expose:
+      - 4004
+    command: settings-tp -C tcp://validator-0:4004
+    stop_signal: SIGKILL
+    networks:
+      - myblockchain
+
+  settings-tp-1:
+    image: hyperledger/sawtooth-settings-tp:1.0
+    container_name: sawtooth-settings-tp-default-1
+    expose:
+      - 4004
+    command: settings-tp -C tcp://validator-1:4004
+    stop_signal: SIGKILL
+    networks:
+      - myblockchain
+
+  settings-tp-2:
+    image: hyperledger/sawtooth-settings-tp:1.0
+    container_name: sawtooth-settings-tp-default-2
+    expose:
+      - 4004
+    command: settings-tp -C tcp://validator-2:4004
+    stop_signal: SIGKILL
+    networks:
+      - myblockchain
+
+
+  poet-validator-registry-tp-0:
+    image: hyperledger/sawtooth-poet-validator-registry-tp:1.0
+    container_name: sawtooth-poet-validator-registry-tp-0
+    expose:
+      - 4004
+    command: poet-validator-registry-tp -C tcp://validator-0:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/consensus/poet/common
+    stop_signal: SIGKILL
+    networks:
+      - myblockchain
+
+  poet-validator-registry-tp-1:
+    image: hyperledger/sawtooth-poet-validator-registry-tp:1.0
+    container_name: sawtooth-poet-validator-registry-tp-1
+    expose:
+      - 4004
+    command: poet-validator-registry-tp -C tcp://validator-1:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/consensus/poet/common
+    stop_signal: SIGKILL
+    networks:
+      - myblockchain
+
+  poet-validator-registry-tp-2:
+    image: hyperledger/sawtooth-poet-validator-registry-tp:1.0
+    container_name: sawtooth-poet-validator-registry-tp-2
+    expose:
+      - 4004
+    command: poet-validator-registry-tp -C tcp://validator-2:4004
+    environment:
+      PYTHONPATH: /project/sawtooth-core/consensus/poet/common
+    stop_signal: SIGKILL
+    networks:
+      - myblockchain
+
+
+  python_tp-0:
     build:
       context: ./transaction-processor
-    image: bank-1
-    container_name: python_tp-bank
+      dockerfile: ./Dockerfile
+    image: bank-tp
+    container_name: python_tp-bank-0
     depends_on:
-      - validator
+      - validator-0
     volumes:
       - ./transaction-processor:/project
+    command: python3 main.py -C tcp://validator-0:4004
+    restart: on-failure
+    networks:
+      - myblockchain
+
+
+  python_tp-1:
+    build:
+      context: ./transaction-processor
+      dockerfile: ./Dockerfile
+    image: bank-tp
+    container_name: python_tp-bank-1
+    depends_on:
+      - validator-1
+    volumes:
+      - ./transaction-processor:/project
+    command: python3 main.py -C tcp://validator-1:4004
+    restart: on-failure
+    networks:
+      - myblockchain
+
+
+  python_tp-2:
+    build:
+      context: ./transaction-processor
+      dockerfile: ./Dockerfile
+    image: bank-tp
+    container_name: python_tp-bank-2
+    depends_on:
+      - validator-2
+    volumes:
+      - ./transaction-processor:/project
+    command: python3 main.py -C tcp://validator-2:4004
+    restart: on-failure
     networks:
       - myblockchain

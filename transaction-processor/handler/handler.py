@@ -1,5 +1,7 @@
 import logging
 import hashlib
+import traceback
+
 from sawtooth_sdk.processor.handler import TransactionHandler
 import transaction_pb2 as tx_payload
 from sawtooth_sdk.processor.exceptions import InvalidTransaction
@@ -58,8 +60,11 @@ class BankingTransaction(TransactionHandler):
             try:
                 command(payloadobj,signer,context,transaction.signature)
                 LOGGER.debug("Done with function")
-            except Exception as ex:
-                logging.exception('Caught an error',ex)
+            except KeyboardInterrupt:
+                pass
+            except Exception as e:
+                LOGGER.error(traceback.format_exc())
+                raise InvalidTransaction(traceback.format_exc())
 
 
 

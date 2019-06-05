@@ -8,7 +8,7 @@ var readlineSync = require('readline-sync');
 const keyOps = require('./keyops.js')
 const config = require('./config.json')
 var protoObj = require("protobufjs");
-const restapiURL = 'http://localhost:8024'
+const restapiURL = 'http://localhost:8008'
 
 //Encoding of Payload
 
