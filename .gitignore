@@ -1,2 +1,8 @@
-/poet-shared
+poet-shared
 *.pem
+node_modules
+artifacts
+*.sh
+keys
+package-lock.json
+_pycache_
