@@ -18,5 +18,11 @@
   "bugs": {
     "url": "https://github.com/mayankmk14/SawtoothDemo/issues"
   },
-  "homepage": "https://github.com/mayankmk14/SawtoothDemo#readme"
+  "homepage": "https://github.com/mayankmk14/SawtoothDemo#readme",
+  "dependencies": {
+    "fs-extra": "^8.1.0",
+    "readline-sync": "^1.4.10",
+    "request": "^2.88.0",
+    "sawtooth-sdk": "^1.0.5"
+  }
 }
