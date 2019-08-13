@@ -52,7 +52,8 @@ function createPrivateKeyForUser(username){
     }
     var keyObj=generatePrivateKey();
     
-    return fs.writeFileSync(filepath,keyObj.hexEncoded);
+    fs.writeFileSync(filepath,keyObj.hexEncoded);
+    return keyObj.hexEncoded;
 }
 
 /**
