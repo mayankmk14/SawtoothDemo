@@ -15,12 +15,14 @@ services:
     # start the validator with an empty genesis batch
     entrypoint: |
       bash -c "
+      if [ ! -f /var/lib/sawtooth/block-chain-id ]; then \
         if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
           sawadm keygen &&
           sawtooth keygen my_key &&
           sawset genesis -k /root/.sawtooth/keys/my_key.priv &&
           sawadm genesis config-genesis.batch
         fi;
+      fi;
         sawtooth-validator -vv \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
