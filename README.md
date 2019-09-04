@@ -17,4 +17,4 @@ Using Poet-Simulator as consensus (Smartcontract remains unchanged) to create a 
 
 Commands :
 To start Blockchain (from root folder) : `docker-compose up`
-TO start Client (from root folder) : `node index.js` 
+TO start Client (from root folder) : `npm i  && node index.js` 
