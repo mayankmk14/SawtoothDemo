@@ -5,4 +5,4 @@ artifacts
 *.sh
 keys
 package-lock.json
-_pycache_
+__pycache__/*

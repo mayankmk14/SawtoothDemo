@@ -3,12 +3,15 @@ const {
     createContext,
     CryptoFactory
 } = require('sawtooth-sdk/signing')
+const crypto = require('crypto');
 const context = createContext('secp256k1')
 var readlineSync = require('readline-sync');
 const keyOps = require('./keyops.js')
 const config = require('./config.json')
 var protoObj = require("protobufjs");
+const request = require('request')
 const restapiURL = 'http://localhost:8008'
+const asset = require('./proto/compiled_proto/assets')
 
 //Encoding of Payload
 
@@ -20,6 +23,8 @@ protoObj.load('./proto/transaction.proto', function (err, root) {
 
     var tx = root.lookupType("SawDemo.Payload");
 
+
+
     option = readlineSync.question('options?' + "\n" + '1. Create Private key' + "\n" + '2. Doing Transaction' + "\n" + 'Enter your choices' + "\n");
 
     if (option == '1') {
@@ -27,7 +32,7 @@ protoObj.load('./proto/transaction.proto', function (err, root) {
         console.log("Generating Private Key")
         username = readlineSync.question('Enter a username :');
         PrivateKey = keyOps.createPrivateKeyForUser(username); //user Private Key
-        userPublicKey = keyOps.getUserPublicKey(username);
+        userPublicKey = keyOps.getUserPublicKey(username); //user Public Key
         console.log("Private key", PrivateKey);
         console.log("Public key", userPublicKey);
         console.log("Restart the file to now do a transaction...\nPrivate key is saved in Keys Directory and is auto accessed for signing Transactions")
@@ -37,7 +42,7 @@ protoObj.load('./proto/transaction.proto', function (err, root) {
         console.log("Proceed to transaction");
         username = readlineSync.question('username : ');
         PrivateKey = keyOps.getPrivateKey(username); //user Private Key
-        // userPublicKey=keyOps.getUserPublicKey(username);
+        userPublicKey = keyOps.getUserPublicKey(username); //user Public Key
         choice = readlineSync.question('operations choice?' + "\n" + '1. Create Account' + "\n" + '2. Credit' + "\n" + '3. Debit' + "\n" + '4. Balance \n');
         if (choice == 1) {
             // payload for ACCOUNT CREATION operation
@@ -76,16 +81,12 @@ protoObj.load('./proto/transaction.proto', function (err, root) {
                 submissionTimestamp: new Date().getTime()
             }
         } else if (choice == 4) {
-            // payload for BALANCE operation
-            var payload = {
-                action: tx.Action.BALANCE,
-                submissionTimestamp: new Date().getTime()
-            }
 
-            console.log("See Balance in Docker Logs...")
-            // getResult().then(data =>{
-            //     console.log("Data",data)
-            // })
+            let address = get_user_address(userPublicKey)
+            getResult(address).then(data => {
+                console.log("Your Balance is ----> ", data.balance)
+            })
+            return;
         } else {
             console.log("option is not available...BYE")
             return
@@ -220,8 +221,6 @@ protoObj.load('./proto/transaction.proto', function (err, root) {
 
     console.log("BatchListAsbytes- ", batchListBytes)
 
-    const request = require('request')
-
     request.post({
         url: config.restapiURL + '/batches',
         body: batchListBytes,
@@ -233,45 +232,43 @@ protoObj.load('./proto/transaction.proto', function (err, root) {
         console.log(response.body)
     })
 
-    // if(choice == '4'){
-    //     console.log("Checking Balance atfer 3 Seconds")
-    //     setTimeout(() => {
-    //         getResult(transaction.headerSignature);            
-    //     },3000);
 
-    // }
-
-    function getNonce() {
-        var dateString = Date.now().toString(36).slice(-5);
-        var randomString = Math.floor(Math.random() * 46655).toString(36);
-        return dateString + ('00' + randomString).slice(-3);
-    }
 
 });
 
-// function getResult(id) {
-//     return new Promise((resolve, reject) => {
-//         console.log("Txid",id)
-//         const request = require('request')
+function getResult(address) {
+    return new Promise((resolve, reject) => {
+        console.log("ADDRESS", address)
+        request.get({
+            url: restapiURL + '/state/' + address
+        }, (err, response) => {
+            if (err) {
+                console.log("error in getResult", err)
+                reject(err)
+            }
+            // decoded = base64.b64decode("")
+            var bytes = new Buffer(JSON.parse(response.body).data, "base64")
+            // var data = JSON.parse(response.body);
+            let Account = asset.Account.decode(bytes)
+            resolve({
+                success: true,
+                balance: Account.balance
+            })
+        })
 
-//         request.get({
-//             url: restapiURL + '/state'
-//         }, (err, response) => {
-//             if (err) {
-//                 console.log("error in getResult", err)
-//                 reject(err)
-//             }
-//             // decoded = base64.b64decode("")
-//             var data = JSON.parse(response.body);
-//             console.log("views the Results",data.data.length)
-//             for (var i = 0; i < (data.data.length); i++) {
-//                 var otp =  atob(data.data[i].data)
-//                 console.log("otp", otp)
-//                 // console.log("Addresses :-" + data.data[i].address + "  :" + "Result ", Buffer.from(data.data[i].data, "base64").toString());
-//             }
+    })
+}
 
-//             resolve({ success: true })
-//         })
 
-//     })
-//  }
+function get_user_address(publicKey) {
+    let address = crypto.createHash('sha512').update(config.familyName).digest('hex').substring(0, 6) + crypto.createHash('sha512').update("asset_type_user").digest('hex').substring(0, 6) + publicKey.substring(0, 58)
+    return address;
+}
+
+
+
+function getNonce() {
+    var dateString = Date.now().toString(36).slice(-5);
+    var randomString = Math.floor(Math.random() * 46655).toString(36);
+    return dateString + ('00' + randomString).slice(-3);
+}
