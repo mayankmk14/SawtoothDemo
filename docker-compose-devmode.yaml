@@ -1,0 +1,89 @@
+version: '2.0'
+
+networks:
+  myblockchain:
+
+services:
+
+  validator:
+    image: hyperledger/sawtooth-validator:1.1
+    container_name: my-bank
+    expose:
+      - 4004
+    ports:
+      - '4020:4004'
+    # start the validator with an empty genesis batch
+    entrypoint: |
+      bash -c "
+        if [ ! -f /etc/sawtooth/keys/validator.priv ]; then
+          sawadm keygen &&
+          sawtooth keygen my_key &&
+          sawset genesis -k /root/.sawtooth/keys/my_key.priv &&
+          sawadm genesis config-genesis.batch
+        fi;
+        sawtooth-validator -vv \
+          --endpoint tcp://validator:8800 \
+          --bind component:tcp://eth0:4004 \
+          --bind network:tcp://eth0:8800 \
+          --bind consensus:tcp://eth0:5050 
+      "
+    networks:
+      - myblockchain
+
+  devmode-engine:
+    image: hyperledger/sawtooth-devmode-engine-rust:1.1
+    container_name: sawtooth-devmode-engine-rust
+    ports:
+      - 5051:5050
+    depends_on:
+      - validator
+    entrypoint: devmode-engine-rust -C tcp://validator:5050
+    networks: 
+      - myblockchain
+
+
+  settings-tp:
+    image: hyperledger/sawtooth-settings-tp:1.1
+    container_name: my-settings-tp-bank
+    depends_on:
+      - validator
+    entrypoint: settings-tp -vv -C tcp://validator:4004
+    networks:
+      - myblockchain
+
+  identity-tp:
+    image: hyperledger/sawtooth-identity-tp:1.1
+    container_name: my-identity-tp-bank
+    depends_on:
+      - validator
+    entrypoint: identity-tp -vv -C tcp://validator:4004
+    networks:
+      - myblockchain  
+
+  rest-api:
+    image: hyperledger/sawtooth-rest-api:1.1
+    container_name: my-rest-api-bank
+    expose:
+      - 8008
+    ports:
+      - '8008:8008'
+    depends_on:
+      - validator
+    entrypoint: |
+      sawtooth-rest-api -vv
+        --connect tcp://validator:4004
+        --bind rest-api:8008
+    networks:
+      - myblockchain
+
+  python_tp:
+    build:
+      context: ./transaction-processor
+    image: bank-1
+    container_name: python_tp-bank
+    depends_on:
+      - validator
+    volumes:
+      - ./transaction-processor:/project
+    networks:
+      - myblockchain
